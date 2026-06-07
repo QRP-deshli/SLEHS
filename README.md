@@ -189,10 +189,30 @@ Key parameters are defined in `src/include/parameters.h`:
 
 ---
 
+### Deployment Mode (`DEPLOYMENT_OPTION`)
+
+At the top of `server_web.c` there is a single switch that controls whether diagnostic commands are compiled in:
+
+```c
+#define TESTING 0   // Enables "stats" and "info" commands
+#define PROD    1   // Disables them — minimal attack surface
+
+#define DEPLOYMENT_OPTION TESTING  // <-- change this before flashing
+```
+
+| Mode | `"stats"` command | `"info"` command | Use when |
+|---|---|---|---|
+| `TESTING` | ✅ Enabled | ✅ Enabled | Development, evaluation, research |
+| `PROD` | ❌ Disabled | ❌ Disabled | Any real deployment |
+
+**Always set `DEPLOYMENT_OPTION PROD` before deploying to a public network.** In `PROD` mode the server only accepts `"web"` as a valid post-auth command, which minimises the amount of behaviour an attacker can probe or fingerprint.
+
+---
+
 ## Security Notes
 
 - **Change the pre-shared key** before deploying. It is the root of trust for the entire authentication chain.
-- The `"stats"` and `"info"` diagnostic commands are intended for evaluation only. Disable them in production by removing them from the command handler to reduce attack surface.
+- **Set `DEPLOYMENT_OPTION` to `PROD`** to disable the `"stats"` and `"info"` diagnostic commands. These exist only for evaluation and expose internal metrics to anyone who authenticates.
 - The server uses a **self-signed certificate**. Clients must either accept it manually or have the certificate pre-installed.
 - The blacklist is **volatile** (RAM only). It resets on power loss or reboot.
 
