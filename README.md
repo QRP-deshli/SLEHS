@@ -202,8 +202,8 @@ At the top of `server_web.c` there is a single switch that controls whether diag
 
 | Mode | `"stats"` command | `"info"` command | Use when |
 |---|---|---|---|
-| `TESTING` | ✅ Enabled | ✅ Enabled | Development, evaluation, research |
-| `PROD` | ❌ Disabled | ❌ Disabled | Any real deployment |
+| `TESTING` | Enabled | Enabled | Development, evaluation, research |
+| `PROD` | Disabled | Disabled | Any real deployment |
 
 **Always set `DEPLOYMENT_OPTION PROD` before deploying to a public network.** In `PROD` mode the server only accepts `"web"` as a valid post-auth command, which minimises the amount of behaviour an attacker can probe or fingerprint.
 
