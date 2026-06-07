@@ -17,6 +17,17 @@
 #include <stdint.h>
 #include <stddef.h>
 
+/* ============================================================
+ * DEPLOYMENT MODE SWITCH
+ * Controls whether diagnostic post-auth commands ("stats", "info")
+ * are active. Set to PROD before flashing to any public network
+ * to minimise the firmware's attack surface.
+ * ============================================================ */
+#define TESTING 0   // Diagnostic commands enabled  — for evaluation/research only
+#define PROD    1   // Diagnostic commands disabled — minimal attack surface
+
+#define DEPLOYMENT_OPTION TESTING
+
 // ============================================================================
 // SNTP TIME RETRIEVAL CONFIGURATION
 // ============================================================================
