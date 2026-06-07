@@ -27,27 +27,56 @@
 #include "socket.h"
 #include "pico/stdlib.h"
 
-extern absolute_time_t https_start_time; 
+// Timestamp recorded when the HTTPS server starts
+extern absolute_time_t https_start_time;
+
+// Session table storing active client connection information
 extern sess_t sess[MAX_SOCKETS];
+
+// Master cryptographic key used for session key derivation
 extern uint8_t MASTER_KEY[KEY_SIZE];
+
+// Indicates whether HTTPS services have been initialized
 extern bool https_init_flag;
 
-// Label for HKDF-like derivation //
+
+// Label used as context information during HKDF-like session key derivation
 extern uint8_t SESS_INFO[];
+
+// Length of the SESS_INFO context string
 #define SESS_INFO_LEN  19U
+
+// Timestamp of SYN-RECV state entry for each socket (used for timeout tracking)
 extern uint64_t synrecv_start_us[MAX_SOCKETS];
+
+// Persistent restart-related data structure
 extern restart_data_t res_data;   // Var for restart value
 
+
+// Statistics collected during the current hourly period
 extern stats_tracker_t hourly_stats;
+
+// Timestamp of the most recent statistics reset
 extern absolute_time_t last_stats_reset;
 
+// Current operating mode of the server ports
 extern port_mode_t current_port_mode;
+
+// IPv4 address of the currently connected HTTPS client
 extern uint8_t https_client_ip[4];
+
+// Timeout timestamp for the active HTTPS session
 extern absolute_time_t https_timeout;
 
+// Circular buffer containing historical hourly statistics records
 extern hourly_record_t stats_history[];
+
+// Number of valid entries currently stored in the history buffer
 extern uint16_t history_count;
+
+// Index of the next position to write in the history buffer
 extern uint16_t history_head;
+
 
 /* ============================================================
  * FUNCTION: is_valid_cmd
@@ -246,20 +275,36 @@ bool proc_frame(uint8_t sk, frame_t *rx, frame_t *tx, sess_t *s)
     if (rx->cmd == CMD_DATA && rx->len > 0) {
         async_print("Client says: %.*s\n", rx->len, rx->data);
         
-        // 1. STREAMING HISTORY COMMAND
-        if (rx->len >= 4 && strncmp((char*)rx->data, "info", 4) == 0) {
-            s->streaming_history = true;
-            s->history_cursor = 0;
-            s->system_up_only = false;
-            if (!s->wait_ack) s->send_data = true; 
-        } 
-        // 2. EXPLICIT HOURLY STATS COMMANDS ("stats" or "hello")
-        else if ((rx->len >= 5 && strncmp((char*)rx->data, "stats", 5) == 0) || 
-                 (rx->len >= 5 && strncmp((char*)rx->data, "hello", 5) == 0)) {
-            s->streaming_history = false;
-            s->system_up_only = false;
-            if (!s->wait_ack) s->send_data = true; 
+        /* ------------------------------------------------------------
+        * POST-AUTH COMMAND: "info"
+        * Streams the full 2-week rolling history log back to the client,
+        * one hourly record at a time (see streaming_history / history_cursor).
+        * Only compiled in when DEPLOYMENT_OPTION == TESTING.
+        * ------------------------------------------------------------ */
+        if (rx->len >= 4 && strncmp((char*)rx->data, "info", 4) == 0 &&
+            DEPLOYMENT_OPTION == TESTING) {
+
+            s->streaming_history = true;   // Tell the send loop to page through history records
+            s->history_cursor    = 0;      // Start from the oldest record
+            s->system_up_only    = false;  // Send full metrics, not just the uptime stub
+            if (!s->wait_ack) s->send_data = true;  // Kick off the first send immediately if socket is idle
+
+        /* ------------------------------------------------------------
+        * POST-AUTH COMMANDS: "stats" / "hello"
+        * Returns the current single-hour diagnostics snapshot
+        * (auth successes, timeouts, active socket metrics).
+        * "hello" is accepted as an alias — useful for quick liveness checks.
+        * Only compiled in when DEPLOYMENT_OPTION == TESTING.
+        * ------------------------------------------------------------ */
+        } else if (((rx->len >= 5 && strncmp((char*)rx->data, "stats", 5) == 0) ||
+             (rx->len >= 5 && strncmp((char*)rx->data, "hello", 5) == 0)) &&
+              DEPLOYMENT_OPTION == TESTING) {
+
+            s->streaming_history = false;  // Single snapshot, not a multi-record stream
+            s->system_up_only    = false;  // Send full hourly metrics
+            if (!s->wait_ack) s->send_data = true;  // Kick off send immediately if socket is idle
         }
+        
         // 3. SECURE PORT SWITCH OVER TO HTTPS
         else if (rx->len >= 3 && strncmp((char*)rx->data, "web", 3) == 0) {
            
