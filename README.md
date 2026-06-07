@@ -146,11 +146,12 @@ This project is part of the [WIZnet RP2350 examples](https://github.com/WIZnet-i
 - [WIZnet ioLibrary](https://github.com/WIZnet-ioLibrary/WIZnet-PICO-C)
 - [mbedTLS](https://github.com/Mbed-TLS/mbedtls) (placed at `libraries/mbedtls/`)
 - CMake ≥ 3.13, ARM GCC toolchain
+- Ninja ≥ 1.12
 
 ```bash
 mkdir build && cd build
 cmake .. -DPICO_BOARD=pico2
-make server_web
+ninja server_web
 ```
 
 Flash the resulting `server_web.uf2` onto the board by holding BOOTSEL and dragging the file onto the USB drive.
