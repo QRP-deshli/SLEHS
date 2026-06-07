@@ -18,7 +18,7 @@
 /*
 The purpose of this function is to handle errors by printing error details 
 and resetting the system using the watchdog timer. This is the recommended 
-software reset method for the W5100S-EVB-Pico board.
+software reset method for the W6100-EVB-Pico2 board.
 
 #About watchdog on Pico MCU:
 - Link about resetting the board with a watchdog: 
