@@ -1,6 +1,6 @@
 # SLEHS — Secure Lightweight Embedded HTTPS Server
 
-A secure HTTPS server for the **RP2350 microcontroller** (Wiznet W6100-EVB-Pico2 board) that provides encrypted web access and actively defends itself against network attacks — all while consuming just **0.25 W** of power.
+A secure HTTPS server for the **RP2350 microcontroller** (Wiznet W6100-EVB-Pico2 board) that provides encrypted web access and actively defends itself against network attacks — all while consuming just **0.3 W** of power.
 
 > Research paper: *"Secure Lightweight Embedded HTTPS Server: Autonomous Threat Detection and Mitigation at the Edge"* — Kuropatkin & Drutarovsky, Technical University of Košice, 2026.
 
