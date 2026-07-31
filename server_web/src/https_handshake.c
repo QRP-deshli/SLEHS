@@ -67,6 +67,22 @@ static inline bool tls_is_soft_close(int ret) {
             ret == 0);
 }
 
+
+psa_status_t mbedtls_psa_external_get_random(mbedtls_psa_external_random_context_t *ctx,
+                                              uint8_t *output, size_t output_size,
+                                              size_t *output_length) {
+    (void)ctx;
+    size_t i = 0;
+    while (i < output_size) {
+        uint64_t r = get_rand_64();
+        size_t chunk = (output_size - i) < 8 ? (output_size - i) : 8;
+        memcpy(output + i, &r, chunk);
+        i += chunk;
+    }
+    *output_length = output_size;
+    return PSA_SUCCESS;
+}
+
 /*
  * Function: tls_recv
  * Description: mbedTLS RX callback — bridges mbedTLS with the WIZnet socket layer.
@@ -127,17 +143,25 @@ static int tls_send(void *ctx, const unsigned char *buf, size_t len) {
  * Function: pico_entropy
  * Description: Hardware entropy source for mbedTLS using the Pico's built-in RNG.
  */
-static int pico_entropy(void *data, unsigned char *output, size_t len) {
+
+static int pico_entropy(void *data, unsigned char *output, size_t len)
+{
     (void)data;
     size_t i = 0;
     while (i < len) {
-        uint32_t r = get_rand_32();
-        size_t chunk = (len - i) < 4 ? (len - i) : 4;
+        uint64_t r = get_rand_64();
+        size_t chunk;
+        if ((len - i) < 8) {
+            chunk = len - i;
+        } else {
+            chunk = 8;
+        }
         memcpy(output + i, &r, chunk);
         i += chunk;
     }
     return 0;
 }
+
 
 /*
  * Function: tls_soft_reset
@@ -176,6 +200,20 @@ void https_init_system() {
                                  MBEDTLS_SSL_IS_SERVER,
                                  MBEDTLS_SSL_TRANSPORT_STREAM,
                                  MBEDTLS_SSL_PRESET_DEFAULT);
+
+    // --- Key exchange: X25519 only -----------------------------------
+    static const uint16_t groups[] = {
+        MBEDTLS_SSL_IANA_TLS_GROUP_X25519,
+        0   // zero-terminated
+    };
+    mbedtls_ssl_conf_groups(&conf, groups);
+
+    static const int ciphersuites[] = {
+    MBEDTLS_TLS1_3_CHACHA20_POLY1305_SHA256,   // 0x1303 — the correct TLS 1.3 ID
+    0
+    };
+    mbedtls_ssl_conf_ciphersuites(&conf, ciphersuites);
+
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
     mbedtls_ssl_conf_own_cert(&conf, &srvcert, &pkey);
     mbedtls_ssl_setup(&ssl, &conf);
